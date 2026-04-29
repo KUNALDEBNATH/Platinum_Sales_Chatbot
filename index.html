@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platinum software</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3350;
+      --accent:    #4f7cff;
+      --accent-dk: #3a5ecc;
+      --user-bg:   #1e3a8a;
+      --bot-bg:    #1e2235;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --success:   #22c55e;
+      --warn:      #f59e0b;
+      --danger:    #ef4444;
+      --radius:    12px;
+      --radius-sm: 6px;
+      --font:      'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono:      'Cascadia Code', 'Fira Code', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    .header-title h1 { font-size: 16px; font-weight: 700; }
+    .header-title p  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      background: var(--surface2); border: 1px solid var(--border);
+      transition: all .3s;
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted); transition: background .3s;
+    }
+    .status-pill.ready .dot  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-pill.error .dot  { background: var(--danger); }
+
+    .btn-reset {
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 12px; cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-reset:hover { color: var(--text); border-color: var(--muted); }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    aside {
+      width: 240px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 16px 12px;
+      gap: 6px;
+      overflow-y: auto;
+    }
+
+    aside h2 {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted);
+      padding: 0 4px 8px; border-bottom: 1px solid var(--border);
+    }
+
+    .suggestion-btn {
+      width: 100%; text-align: left;
+      padding: 9px 10px; border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent; color: var(--text);
+      font-size: 13px; cursor: pointer; transition: all .15s;
+      line-height: 1.4;
+    }
+    .suggestion-btn:hover {
+      background: var(--surface2); border-color: var(--border);
+    }
+
+    .chat-pane {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    #messages {
+      flex: 1; overflow-y: auto;
+      padding: 24px 28px;
+      display: flex; flex-direction: column; gap: 18px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9px; }
+
+    .msg { display: flex; gap: 10px; max-width: 760px; }
+    .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+    .msg.bot  { align-self: flex-start; }
+
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; background: var(--surface2); border: 1px solid var(--border);
+    }
+    .msg.user .avatar { background: var(--user-bg); border-color: #3b5fc0; }
+
+    .bubble {
+      padding: 12px 16px; border-radius: var(--radius);
+      font-size: 14px; line-height: 1.65;
+      max-width: calc(100% - 44px);
+    }
+    .msg.user .bubble {
+      background: var(--user-bg);
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot .bubble {
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .meta {
+      font-size: 11px; color: var(--muted);
+      margin-top: 5px; display: flex; gap: 10px; align-items: center;
+    }
+    .msg.user .meta { justify-content: flex-end; }
+
+    .intent-tag {
+      padding: 1px 7px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 10px; font-family: var(--mono); color: var(--accent);
+    }
+
+
+    .welcome-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 28px;
+      text-align: center; max-width: 500px; margin: auto;
+    }
+    .welcome-card .icon { font-size: 40px; margin-bottom: 12px; }
+    .welcome-card h2 { font-size: 18px; margin-bottom: 8px; }
+    .welcome-card p  { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* Typing indicator */
+    .typing-indicator .bubble {
+      display: flex; gap: 5px; align-items: center; padding: 14px 18px;
+    }
+    .typing-indicator .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted); animation: bounce .9s infinite;
+    }
+    .typing-indicator .dot:nth-child(2) { animation-delay: .15s; }
+    .typing-indicator .dot:nth-child(3) { animation-delay: .30s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-6px); }
+    }
+
+  
+    .input-bar {
+      padding: 16px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+
+    #query {
+      flex: 1; resize: none;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 16px; font-family: var(--font); font-size: 14px;
+      line-height: 1.5; max-height: 120px; outline: none;
+      transition: border-color .2s;
+    }
+    #query:focus   { border-color: var(--accent); }
+    #query::placeholder { color: var(--muted); }
+
+    #send-btn {
+      width: 44px; height: 44px; flex-shrink: 0;
+      border-radius: 10px; border: none;
+      background: var(--accent); color: #fff;
+      font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s, transform .1s;
+    }
+    #send-btn:hover   { background: var(--accent-dk); }
+    #send-btn:active  { transform: scale(.94); }
+    #send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+
+    @media (max-width: 700px) {
+      aside { display: none; }
+      #messages { padding: 16px; }
+      .input-bar { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+
+<header>
+  <div class="header-left">
+    <div class="logo"></div>
+    <div class="header-title">
+      <h1>Platinum Software</h1>
+      <p>Enquiry · Appointment · Feedback</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <div class="status-pill" id="status-pill">
+      <span class="dot"></span>
+      <span id="status-text"></span>
+    </div>
+    <button class="btn-reset" id="reset-btn">↺ Reset</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Sidebar: suggestions -->
+  <aside>
+    <h2>Quick queries</h2>
+    <div id="suggestions-list">
+      <!-- populated by JS -->
+    </div>
+  </aside>
+
+  <!-- Chat pane -->
+  <div class="chat-pane">
+    <div id="messages">
+      <div class="welcome-card" id="welcome-card">
+        <div class="icon"></div>
+        <h2>Ask anything about your sales data</h2>
+        <p>Try a quick query from the sidebar, or type your own question below.<br>
+           The chatbot searches across Enquiry, Appointment, and Feedback datasets.</p>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <textarea id="query" rows="1" placeholder="e.g. Who gave bad feedback?  |  Show ENQ001  |  Cancelled appointments…"></textarea>
+      <button id="send-btn" title="Send (Enter)">&#9658;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  const API = "";   
+
+  const messagesEl   = document.getElementById("messages");
+  const queryEl      = document.getElementById("query");
+  const sendBtn      = document.getElementById("send-btn");
+  const resetBtn     = document.getElementById("reset-btn");
+  const statusPill   = document.getElementById("status-pill");
+  const statusText   = document.getElementById("status-text");
+  const suggList     = document.getElementById("suggestions-list");
+  const welcomeCard  = document.getElementById("welcome-card");
+
+  // ── Status polling
+  async function checkHealth() {
+    try {
+      const r = await fetch(`${API}/api/health/`);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      const ready = d.chatbot_ready;
+      statusPill.className = "status-pill " + (ready ? "ready" : "error");
+      statusText.textContent = ready
+        ? (d.llm_ready ? "LLM + RAG ready" : "RAG ready (LLM loading…)")
+        : (d.init_error || "Initialising…");
+    } catch {
+      statusPill.className = "status-pill error";
+      statusText.textContent = "API unreachable";
+    }
+  }
+  checkHealth();
+  setInterval(checkHealth, 8000);
+
+
+  async function loadSuggestions() {
+    try {
+      const r = await fetch(`${API}/api/suggestions/`);
+      const d = await r.json();
+      d.suggestions.forEach(s => {
+        const btn = document.createElement("button");
+        btn.className = "suggestion-btn";
+        btn.textContent = s;
+        btn.addEventListener("click", () => sendMessage(s));
+        suggList.appendChild(btn);
+      });
+    } catch {
+      suggList.innerHTML = '<p style="font-size:12px;color:var(--muted);padding:4px">Could not load suggestions.</p>';
+    }
+  }
+  loadSuggestions();
+
+
+  queryEl.addEventListener("input", () => {
+    queryEl.style.height = "auto";
+    queryEl.style.height = Math.min(queryEl.scrollHeight, 120) + "px";
+  });
+
+  queryEl.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(queryEl.value.trim());
+    }
+  });
+  sendBtn.addEventListener("click", () => sendMessage(queryEl.value.trim()));
+
+
+  resetBtn.addEventListener("click", async () => {
+    try {
+      await fetch(`${API}/api/reset/`, { method: "POST" });
+    } catch { /* ignore */ }
+    messagesEl.innerHTML = "";
+    messagesEl.appendChild(welcomeCard);
+    welcomeCard.style.display = "";
+  });
+
+  function scrollBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function timeNow() {
+    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function appendMessage(role, text, intent = null, elapsed = null) {
+    welcomeCard.style.display = "none";
+
+    const msg    = document.createElement("div");
+    msg.className = `msg ${role}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = role === "user" ? "User" : "BOT";
+
+    const wrap = document.createElement("div");
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.style.whiteSpace = "pre-wrap";
+    bubble.textContent = text;
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = timeNow();
+    if (intent) {
+      const tag = document.createElement("span");
+      tag.className = "intent-tag";
+      tag.textContent = intent;
+      meta.appendChild(tag);
+    }
+    if (elapsed !== null) {
+      const sp = document.createElement("span");
+      sp.textContent = `${elapsed}s`;
+      meta.appendChild(sp);
+    }
+
+    wrap.appendChild(bubble);
+    wrap.appendChild(meta);
+
+    msg.appendChild(avatar);
+    msg.appendChild(wrap);
+    messagesEl.appendChild(msg);
+    scrollBottom();
+    return bubble;
+  }
+
+  function addTyping() {
+    const msg = document.createElement("div");
+    msg.className = "msg bot typing-indicator";
+    msg.id = "typing";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "BOT";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    [1,2,3].forEach(() => {
+      const d = document.createElement("div");
+      d.className = "dot";
+      bubble.appendChild(d);
+    });
+
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    messagesEl.appendChild(msg);
+    scrollBottom();
+    return msg;
+  }
+
+  async function sendMessage(query) {
+    if (!query) return;
+
+    queryEl.value = "";
+    queryEl.style.height = "auto";
+    sendBtn.disabled = true;
+
+    appendMessage("user", query);
+    const typingEl = addTyping();
+
+    try {
+      const resp = await fetch(`${API}/api/chat/`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ query }),
+      });
+
+      typingEl.remove();
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        appendMessage("bot", "Danger! " + (err.error || `Server error ${resp.status}`));
+        return;
+      }
+
+      const data = await resp.json();
+      appendMessage("bot", data.answer, data.intent, data.elapsed);
+
+    } catch (e) {
+      typingEl.remove();
+      appendMessage("bot", " Could not reach the API. Is Django running on " + API + "?");
+    } finally {
+      sendBtn.disabled = false;
+      queryEl.focus();
+    }
+  }
+</script>
+</body>
+</html>
