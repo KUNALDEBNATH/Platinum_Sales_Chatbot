@@ -5,8 +5,14 @@
 
 # ── Core ML / LLM ─────────────────────────────────────────────────────────────
 torch>=2.1.0
+<<<<<<< HEAD
+transformers>=4.49.0
+accelerate>=0.29.0
+qwen-vl-utils>=0.0.8
+=======
 transformers>=4.40.0
 accelerate>=0.29.0
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
 
 # ── Training / Fine-tuning ────────────────────────────────────────────────────
 datasets>=2.18.0
@@ -23,6 +29,22 @@ django>=4.2.0
 djangorestframework>=3.14.0
 django-cors-headers>=4.3.0
 
+<<<<<<< HEAD
+# ── File Attachment Support: Document Parsing ─────────────────────────────────
+pypdf>=4.0.0
+python-docx>=1.1.0
+openpyxl>=3.1.0
+
+# ── File Attachment Support: Image / Vision ────────────────────────────────────
+Pillow>=10.0.0
+pytesseract>=0.3.10
+# System dependency (install via OS package manager, not pip):
+#   sudo apt-get install tesseract-ocr
+
+# ── Standard Library (no install needed) ─────────────────────────────────────
+# os, sys, re, time, pickle, json, threading, warnings, tempfile, uuid
+=======
 # ── Standard Library (no install needed) ─────────────────────────────────────
 # os, sys, re, time, pickle, json, threading, warnings
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
 # argparse, textwrap, collections, difflib — all stdlib

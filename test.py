@@ -17,8 +17,14 @@ LLM_TEMPERATURE = 0.3
 LLM_TOP_P       = 0.9
 
 CHAT_MODELS = [
+<<<<<<< HEAD
+    LLM_MODEL_DIR,                   # your fine-tuned model (train.py output), tried first
+    "Qwen/Qwen2.5-1.5B-Instruct",    # fallback if sales_llm_model/ is missing or fails to load
+    "Qwen/Qwen2.5-0.5B-Instruct",
+=======
     "Qwen/Qwen2.5-1.5B-Instruct",   
     "Qwen/Qwen2.5-0.5B-Instruct",   
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
 ]
 
 _llm_tok   = None
@@ -32,6 +38,12 @@ def _load_llm() -> bool:
     if _llm_ready:
         return True
     for model_path in CHAT_MODELS:
+<<<<<<< HEAD
+        if model_path == LLM_MODEL_DIR and not os.path.isdir(model_path):
+            print(f"  [LLM] Local fine-tuned model '{model_path}' not found — skipping.")
+            continue
+=======
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
         try:
             print(f"  [LLM] Loading '{model_path}' on {LLM_DEVICE} …")
             tok = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
@@ -300,7 +312,11 @@ def expand_query(query: str) -> str:
     return query + " " + " ".join(extra)
 
 
+<<<<<<< HEAD
+def detect_intent(query: str, known_name: str | None = None) -> tuple:
+=======
 def detect_intent(query: str) -> tuple:
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
     expanded    = set(re.findall(r'\w+', expand_query(query).lower()))
     q_lower     = query.lower()
     q_words_raw = set(re.findall(r'\w+', q_lower))
@@ -309,7 +325,17 @@ def detect_intent(query: str) -> tuple:
               for intent, cluster in INTENT_CLUSTERS.items()}
     best = max(scores, key=scores.get)
 
+<<<<<<< HEAD
+    # `known_name` lets a caller (e.g. IntelligentSalesChatbot.chat, which
+    # may have carried a customer name over from the previous turn for a
+    # pronoun-only follow-up like "what is HER enquiry ID?") count as a
+    # name being "present" here too, even though this query's own text
+    # has none — otherwise the narrowing rules below never fire and the
+    # query falls through to an unscoped, full-dataset-style answer.
+    has_name = bool(extract_name(query)) or bool(_extract_name_lower(query)) or bool(known_name)
+=======
     has_name = bool(extract_name(query)) or bool(_extract_name_lower(query))
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
 
     INFO_FIELDS = {"enquiry","id","details","info","information","record","profile",
                    "data","about","for","say","show","tell","give","only","find","get",
@@ -365,6 +391,39 @@ def extract_enq_id(query: str):
     return m.group(1).upper() if m else None
 
 
+<<<<<<< HEAD
+_DATE_RE = re.compile(r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b')
+
+
+def extract_query_date(query: str) -> str | None:
+    """
+    Pull an explicit date like '3/28/2026' out of the query and normalize
+    it to the same M/D/YYYY (no leading zeros) format the CSVs store
+    dates in, so it can be compared directly against the Enquiry Date /
+    Appointment Date / Date fields.
+    """
+    m = _DATE_RE.search(query)
+    if not m:
+        return None
+    month, day, year = m.groups()
+    try:
+        return f"{int(month)}/{int(day)}/{year}"
+    except ValueError:
+        return None
+
+
+def _row_matches_date(row: dict, date_str: str) -> bool:
+    """True if ANY date-like field on this row exactly equals date_str."""
+    for col, val in row.items():
+        if col.startswith("__"):
+            continue
+        if "date" in col.lower() and str(val).strip() == date_str:
+            return True
+    return False
+
+
+=======
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
 _NAME_STOP = {
     "is","was","are","the","for","when","what","who","has","have","did","does",
     "can","tell","me","my","give","other","details","of","email","phone","show",
@@ -1009,9 +1068,47 @@ class IntelligentSalesChatbot:
         t0    = time.time()
         query = normalize_query(raw_query.strip())
 
+<<<<<<< HEAD
+        queried_name = extract_name(query) or _extract_name_lower(query)
+
+        # ── Conversation continuity ──────────────────────────────────────
+        # If THIS message has no name of its own but looks like a short
+        # clarification of what we were just discussing — "I mean
+        # 3/28/2026", "for the Seltos one", "what is HER enquiry ID" —
+        # reuse the customer name from the immediately preceding user turn
+        # instead of running a nameless, unscoped search. Bounded to just
+        # the last turn (not the whole history) so it can't keep dragging
+        # an old customer into an unrelated later question.
+        if not queried_name and len(self.history) >= 2:
+            q_tokens = set(re.findall(r"[a-zA-Z]+", query.lower()))
+            CONTINUATION_HINTS = {
+                "this", "that", "it", "same", "again", "there",
+                "he", "she", "him", "her", "his", "their", "they", "them",
+            }
+            looks_like_clarification = (
+                bool(q_tokens & CONTINUATION_HINTS)
+                or bool(re.search(r"\d", query))
+                or len(q_tokens) <= 6
+            )
+            if looks_like_clarification:
+                prev_role, prev_text = self.history[-2]
+                if prev_role == "You":
+                    queried_name = extract_name(prev_text) or _extract_name_lower(prev_text)
+
+        # Feed the resolved name (including anything carried over above)
+        # into intent detection too — otherwise a pronoun-only follow-up
+        # like "what is HER enquiry ID?" has no name of its own from
+        # detect_intent's point of view, and the "has_name -> narrow to
+        # a single summary" rules below never fire, so it falls through
+        # to a full, unscoped "new_lead" style dump instead of answering
+        # about the specific customer.
+        intent, conf = detect_intent(query, known_name=queried_name)
+
+=======
         intent, conf = detect_intent(query)
         queried_name = extract_name(query) or _extract_name_lower(query)
 
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
         # ── Route to the correct dataset ─────────────────────────────────────
         target_source = INTENT_TO_SOURCE.get(intent)  # None = all datasets
 
@@ -1055,6 +1152,34 @@ class IntelligentSalesChatbot:
                 deduped.append(r)
         results = deduped
 
+<<<<<<< HEAD
+        # ── Explicit date in the query ────────────────────────────────────
+        # A name alone ("Meera") is often ambiguous — this dataset has
+        # several different Meera enquiries/appointments. If the user gave
+        # a specific date ("...on 3/28/2026"), narrow down to ONLY the
+        # record(s) whose Enquiry/Appointment/Feedback date matches it,
+        # instead of letting an unrelated same-name record slip through
+        # and get blended into the answer. If nothing matches, say so
+        # plainly rather than guessing.
+        query_date = extract_query_date(query)
+        if query_date:
+            date_filtered = [r for r in results if _row_matches_date(r, query_date)]
+            if date_filtered:
+                results = date_filtered
+            else:
+                elapsed = time.time() - t0
+                who = f" for {queried_name}" if queried_name else ""
+                answer = (
+                    f"I couldn't find any record{who} on {query_date}. "
+                    f"Double-check the date, or ask without a specific date "
+                    f"to see all matching records."
+                )
+                self.history.append(("You", raw_query))
+                self.history.append(("Assistant", answer))
+                return answer, elapsed, "no_match"
+
+=======
+>>>>>>> f1f6b1dab05ace388b4c1ad720a4a491947a3b91
         if self.show_ctx:
             print(f"\n  [Intent: '{intent}'  confidence={conf:.3f}  target: {target_source}]")
             print("  [Top retrieved records]")
